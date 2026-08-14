@@ -5,3 +5,4 @@ data/processed/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+data/processed/chroma_db/

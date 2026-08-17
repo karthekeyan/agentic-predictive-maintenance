@@ -2,6 +2,8 @@
 Agent: Reasoning Agent
 Takes retrieved evidence (similar historical cases) and generates a grounded
 diagnosis using Claude, citing specific evidence rather than guessing.
+Respects 'insufficient_data' status from the Case Retrieval Agent - skips
+diagnosis rather than reasoning over missing/invalid data (see Day 4 known issue).
 """
 
 import os
@@ -40,8 +42,18 @@ Do not invent information not present in the evidence above. If the evidence is 
 def diagnose(machine_id: int, retrieval_result: dict) -> dict:
     """
     The agent's main function: builds the prompt, calls Claude, and parses
-    the structured response into a usable dict.
+    the structured response into a usable dict. Skips reasoning entirely if
+    the Case Retrieval Agent flagged insufficient/invalid data.
     """
+    if retrieval_result.get('status') == 'insufficient_data':
+        return {
+            'machine_id': machine_id,
+            'likely_component': None,
+            'confidence': None,
+            'reasoning': f"Diagnosis skipped: {retrieval_result.get('reason')}",
+            'raw_response': None
+        }
+
     prompt = build_reasoning_prompt(machine_id, retrieval_result)
 
     response = client.messages.create(
@@ -52,7 +64,6 @@ def diagnose(machine_id: int, retrieval_result: dict) -> dict:
 
     raw_text = response.content[0].text
 
-    # Parse the structured response
     component_match = re.search(r'LIKELY_COMPONENT:\s*(\S+)', raw_text)
     confidence_match = re.search(r'CONFIDENCE:\s*(\d+)', raw_text)
     reasoning_match = re.search(r'REASONING:\s*(.+)', raw_text, re.DOTALL)

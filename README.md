@@ -64,18 +64,32 @@ the full LangGraph pipeline.
 same-day maintenance record, confirming the maintenance data genuinely reflects
 real repair actions rather than unrelated scheduled servicing.
 
-## 24-hour failure probability
+## Historical failure frequency
 
 Alongside the health score (current sensor deviation), the dashboard shows
-a second, independent signal: the real probability a machine fails within
-the next 24 hours, calculated from that machine's own historical failure
-gaps — falling back to the model-level MTBF average when a machine has
-fewer than 3 recorded failures as of the selected date.
+a secondary piece of context: how often, historically, a machine tends to
+fail — its own real average days-between-failures, falling back to the
+model-level MTBF average when a machine has fewer than 3 recorded failures
+as of the selected date.
 
-These two signals can genuinely disagree — a machine can look normal right
-now (low health risk) while still being statistically "due" for a failure
-based on its own history (high 24h probability), or vice versa. Both are
-shown side by side rather than one replacing the other.
+**This was originally built and shipped as a "24-hour failure probability"
+prediction. It was backtested on 25th August and found to have no real
+predictive power** — the calculated probability was nearly identical
+whether checked 24 hours before a real failure (8.02%) or on an ordinary
+day (7.92%). A more sophisticated version accounting for time elapsed
+since the last failure also failed the same test (15.42% vs 16.39%).
+
+**Root cause:** checking the regularity of failure timing across all 100
+machines (coefficient of variation ≈ 0.67) showed failures happen fairly
+irregularly, not on a predictable schedule — so historical timing alone
+cannot reliably predict a specific 24-hour window for this dataset.
+
+The feature was relabeled accordingly. It's now shown honestly as a
+historical statistic — useful as a minor tie-breaker when two machines
+show a similar health score (confirmed to affect a small number of cases:
+95 of 100 machines had unique health scores on a sample date), not as a
+day-specific prediction. The health score remains the validated, primary
+signal for prioritization.
 
 ## What's real vs. what's a design choice
 

@@ -3,7 +3,9 @@
 A multi-agent AI system that predicts industrial machine failures from real sensor
 data, explains its diagnosis using retrieved historical evidence, recommends a
 maintenance action grounded in real repair history, and knows when to act
-automatically versus escalate to a human engineer.
+automatically versus escalate to a human engineer. 
+
+See `docs/PoC_Summary.pptx` for the executive-level presentation of this project's architecture, results, and roadmap.
 
 Built entirely on the [Microsoft Azure Predictive Maintenance dataset](https://www.kaggle.com/datasets/arnabbiswas1/microsoft-azure-predictive-maintenance)
 (Kaggle) — no simulated or invented data anywhere in the pipeline.
@@ -33,6 +35,19 @@ Agents 1–6 are wired into one automated pipeline via **LangGraph** (`src/pipel
 4. Run `notebooks/01_data_exploration.ipynb` from the top to build the health-scored telemetry, MTBF table, and ChromaDB Knowledge Library
 5. Use `src/pipeline.py`'s `build_pipeline()` to run the full agent chain on any machine — see the notebook's Day 6–7 sections for example usage
 
+## Alternative: React + FastAPI dashboard
+
+A more polished, client-facing demo interface, built on the same validated
+pipeline — no separate logic.
+
+1. Start the backend: `uvicorn backend_api:app --reload --port 8000`
+2. Start the frontend: `cd dashboard && npm run dev`
+3. Open `http://localhost:5173`
+
+Pick a date, see every machine ranked by risk, click any machine for the
+full diagnosis (health, diagnosis, confidence, reasoning, recommendation,
+routing).
+
 ## Validated results
 
 **Health scoring (Telemetry Health Agent):** backtested on 740 real historical
@@ -48,6 +63,19 @@ the full LangGraph pipeline.
 **Recommendation grounding:** 97.6% of real historical failures have a matching
 same-day maintenance record, confirming the maintenance data genuinely reflects
 real repair actions rather than unrelated scheduled servicing.
+
+## 24-hour failure probability
+
+Alongside the health score (current sensor deviation), the dashboard shows
+a second, independent signal: the real probability a machine fails within
+the next 24 hours, calculated from that machine's own historical failure
+gaps — falling back to the model-level MTBF average when a machine has
+fewer than 3 recorded failures as of the selected date.
+
+These two signals can genuinely disagree — a machine can look normal right
+now (low health risk) while still being statistically "due" for a failure
+based on its own history (high 24h probability), or vice versa. Both are
+shown side by side rather than one replacing the other.
 
 ## What's real vs. what's a design choice
 
@@ -75,6 +103,12 @@ real repair actions rather than unrelated scheduled servicing.
    component + evidence," not "root cause," to stay within what's provable.
 4. **Confidence thresholds are a design choice**, not derived from the data
    (see above) — worth stating explicitly in any demo or pitch.
+5. **Sensor weighting is currently equal, not learned.** A logistic
+   regression trained on the same 1,040-case backtest showed learned
+   weights (rotation weighted ~30% higher than the others) improve recall
+   to 96.5% at a small precision cost (92.2%, down from 93.6%). This is a
+   genuine, real tradeoff — not adopted yet, documented here for future
+   consideration rather than treated as a settled improvement.
 
 Two additional bugs were found and fixed during development (NaN validation
 gap, and a text-embedding search bias toward certain components) — see the

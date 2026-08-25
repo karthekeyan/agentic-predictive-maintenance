@@ -15,6 +15,7 @@ sys.path.append('src/tools')
 from pipeline import build_pipeline
 from predict_failure_risk import compute_health_scores, predict_failure_risk
 from get_failure_rate_stats import calculate_mtbf_stats
+from get_failure_probability import get_failure_probability
 
 app = FastAPI()
 
@@ -49,14 +50,19 @@ def machines_at_risk(date: str):
     for mid in machines['machineID'].unique():
         result = predict_failure_risk(int(mid), telemetry_scored, as_of=as_of)
         if result['health_score'] is not None:
+            model = machines[machines['machineID'] == mid]['model'].values[0]
+            prob_result = get_failure_probability(int(mid), model, as_of, failures, mtbf_table)
+
             results.append({
                 "machineId": int(mid),
                 "healthScore": round(float(result['health_score']), 4),
                 "riskLevel": result['risk_level'],
+                "failureProbability24h": prob_result['probability_24h'],
+                "failureRiskLabel": prob_result['risk_label'],
             })
 
     risk_order = {"high": 0, "medium": 1, "low": 2}
-    results.sort(key=lambda x: (risk_order.get(x['riskLevel'], 3), -x['healthScore']))
+    results.sort(key=lambda x: -x['failureProbability24h'])
     return {"date": date, "machines": results}
 
 

@@ -81,7 +81,10 @@ function App() {
                   <span className="machine-id">Machine {m.machineId}</span>
                   <span className="health-score">{m.healthScore.toFixed(3)}</span>
                   <span className="risk-badge" style={{ backgroundColor: riskColors[m.riskLevel] }}>
-                    {m.riskLevel}
+                    Health: {m.riskLevel}
+                  </span>
+                  <span className="risk-badge" style={{ backgroundColor: riskColors[m.failureRiskLabel] }}>
+                    24h: {m.failureRiskLabel}
                   </span>
                 </div>
               );

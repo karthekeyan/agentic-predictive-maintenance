@@ -141,3 +141,15 @@ header h1 {
 
 .evidence-box h4 { margin-top: 0; font-size: 0.9rem; }
 .evidence-box p { font-size: 0.88rem; line-height: 1.5; color: #ccc; }
+
+.machine-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.freq-caption {
+  font-size: 0.72rem;
+  color: #888;
+  font-style: italic;
+}

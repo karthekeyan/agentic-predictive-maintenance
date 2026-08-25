@@ -78,14 +78,14 @@ function App() {
                   className={rowClass}
                   onClick={() => runDiagnosis(m.machineId)}
                 >
-                  <span className="machine-id">Machine {m.machineId}</span>
+                  <div className="machine-name-col">
+                    <span className="machine-id">Machine {m.machineId}</span>
+                    <span className="freq-caption">fails ~every {m.avgDaysBetweenFailures}d</span>
+                  </div>
                   <span className="health-score">{m.healthScore.toFixed(3)}</span>
                   <span className="risk-badge" style={{ backgroundColor: riskColors[m.riskLevel] }}>
                     Health: {m.riskLevel}
-                  </span>
-                  <span className="risk-badge" style={{ backgroundColor: riskColors[m.failureRiskLabel] }}>
-                    24h: {m.failureRiskLabel}
-                  </span>
+                  </span>                  
                 </div>
               );
             })}

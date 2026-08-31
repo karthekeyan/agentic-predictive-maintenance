@@ -14,36 +14,54 @@ import anthropic
 load_dotenv('../.env')
 client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
-
-def build_reasoning_prompt(machine_id: int, retrieval_result: dict) -> str:
+def build_reasoning_prompt(machine_id: int, retrieval_result: dict, classifier_result: dict = None) -> str:
     cases_text = "\n\n".join([
         f"Case {i+1} (similarity distance: {c['similarity_distance']}): {c['description']}"
         for i, c in enumerate(retrieval_result['similar_cases'][:5])
     ])
 
-    return f"""You are a predictive maintenance analyst. Based on real sensor data and retrieved historical cases, identify the most likely failing component for this machine.
+    classifier_text = "Not available."
+    if classifier_result and classifier_result.get('status') == 'ok':
+        classifier_text = (
+            f"A trained machine learning model (XGBoost, validated with 0.82-0.94 recall "
+            f"per component on a time-aware historical test) predicts: "
+            f"'{classifier_result['predicted_label']}' "
+            f"with {classifier_result['probability']*100:.1f}% confidence. "
+            f"This model was trained specifically to predict failure within a 24-hour window "
+            f"using real sensor, error, and maintenance history - treat this as strong evidence, "
+            f"particularly when it disagrees with the statistical baseline below."
+        )
+
+    return f"""You are a predictive maintenance analyst. Based on real sensor data, a trained prediction model, and retrieved historical cases, identify the most likely failing component for this machine - or whether no failure is imminent.
 
 CURRENT MACHINE STATE (Machine {machine_id}):
 {retrieval_result['query_used']}
 
-STATISTICALLY MOST COMMON FAILURE for this machine's model (from historical failure-rate data): {retrieval_result['statistically_likely_component']}
+TRAINED MODEL PREDICTION (validated on historical data):
+{classifier_text}
+
+STATISTICALLY MOST COMMON FAILURE for this machine's model (general historical base rate, weaker evidence than the trained model prediction above): {retrieval_result['statistically_likely_component']}
 
 RETRIEVED SIMILAR HISTORICAL CASES (real past failures, ranked by similarity):
 {cases_text}
 
-Based ONLY on the evidence above, respond in this exact format:
-LIKELY_COMPONENT: [component name]
+Based on the evidence above, respond in this exact format:
+LIKELY_COMPONENT: [component name, or "none" if the trained model predicts no imminent failure and no other evidence contradicts it]
 CONFIDENCE: [a number from 0 to 100]
-REASONING: [2-3 sentences explaining your diagnosis, citing which specific retrieved cases support it]
+REASONING: [2-3 sentences explaining your diagnosis. If the trained model's prediction differs from the statistical baseline or retrieved cases, explain how you weighed the evidence and why.]
 
-Do not invent information not present in the evidence above. If the evidence is ambiguous or conflicting, say so and lower your confidence accordingly."""
+The trained model prediction is generally the strongest evidence, since it was specifically validated for this task. Do not invent information not present in the evidence above."""
 
 
-def diagnose(machine_id: int, retrieval_result: dict) -> dict:
+def diagnose(machine_id: int, retrieval_result: dict, classifier_result: dict = None) -> dict:
     """
     The agent's main function: builds the prompt, calls Claude, and parses
     the structured response into a usable dict. Skips reasoning entirely if
     the Case Retrieval Agent flagged insufficient/invalid data.
+
+    classifier_result: optional output from the trained ML model
+    (predict_component_failure_24h) - if provided, included as evidence
+    in the prompt.
     """
     if retrieval_result.get('status') == 'insufficient_data':
         return {
@@ -54,7 +72,7 @@ def diagnose(machine_id: int, retrieval_result: dict) -> dict:
             'raw_response': None
         }
 
-    prompt = build_reasoning_prompt(machine_id, retrieval_result)
+    prompt = build_reasoning_prompt(machine_id, retrieval_result, classifier_result)
 
     response = client.messages.create(
         model="claude-sonnet-4-5",

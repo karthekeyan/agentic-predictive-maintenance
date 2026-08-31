@@ -18,6 +18,7 @@ from case_retrieval_agent import find_similar_past_cases
 from reasoning_agent import diagnose
 from recommendation_agent import recommend_action
 from decision_routing_agent import route_decision
+from predict_component_failure_24h import predict_component_failure_24h
 
 
 class PipelineState(TypedDict):
@@ -25,6 +26,8 @@ class PipelineState(TypedDict):
     model: str
     as_of: object
     telemetry_scored: object
+    telemetry_df: object
+    errors_df: object
     failures_df: object
     maint_df: object
     machines_df: object
@@ -35,6 +38,7 @@ class PipelineState(TypedDict):
     diagnosis_result: Optional[dict]
     recommendation_result: Optional[dict]
     routing_result: Optional[dict]
+    classifier_result: Optional[dict]
 
 
 def telemetry_health_node(state: PipelineState) -> dict:
@@ -53,8 +57,16 @@ def case_retrieval_node(state: PipelineState) -> dict:
 
 
 def reasoning_node(state: PipelineState) -> dict:
-    result = diagnose(state['machine_id'], state['retrieval_result'])
-    return {'diagnosis_result': result}
+    classifier_result = predict_component_failure_24h(
+        machine_id=state['machine_id'],
+        as_of=state['as_of'],
+        telemetry_df=state.get('telemetry_df'),
+        errors_df=state.get('errors_df'),
+        maint_df=state['maint_df'],
+        machines_df=state['machines_df'],
+    )
+    result = diagnose(state['machine_id'], state['retrieval_result'], classifier_result)
+    return {'diagnosis_result': result, 'classifier_result': classifier_result}
 
 
 def recommendation_node(state: PipelineState) -> dict:

@@ -103,6 +103,9 @@ header h1 {
   border-radius: 4px;
   font-size: 0.75rem;
   text-transform: capitalize;
+  width: 130px;
+  text-align: center;
+  display: inline-block;
 }
 
 .detail-panel { overflow-y: auto; }
@@ -111,7 +114,7 @@ header h1 {
 
 .metrics-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   margin: 16px 0;
 }
@@ -120,11 +123,26 @@ header h1 {
   background: #1a1d24;
   border: 1px solid #262a33;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 10px 12px;  
 }
 
-.metric-label { display: block; font-size: 0.75rem; color: #888; }
-.metric-value { display: block; font-size: 1.1rem; margin-top: 2px; text-transform: capitalize; }
+.metric-header {
+  min-height: 4.6em;
+}
+
+.metric-label { 
+  display: block; 
+  font-size: 0.75rem; 
+  color: #888;  
+}
+
+.metric-value { 
+  display: block; 
+  font-size: 1.1rem; 
+  margin-top: 2px; 
+  text-transform: capitalize;  
+}
+
 
 .evidence-grid {
   display: grid;
@@ -152,4 +170,35 @@ header h1 {
   font-size: 0.72rem;
   color: #888;
   font-style: italic;
+}
+
+.metric-note {
+  display: block;
+  font-size: 0.7rem;
+  color: #6fae6f;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.metric-warning {
+  border: 1px solid #d68a10;
+}
+
+.metric-warning .metric-value {
+  color: #d68a10;
+}
+
+.metric-caption {
+  display: block;
+  font-size: 0.68rem;
+  color: #888;
+  margin-top: auto;
+  line-height: 1.35;
+  padding-top: 8px;
+}
+
+.failure-prob {
+  font-size: 0.8rem;
+  color: #d68a10;
+  font-weight: 500;
 }

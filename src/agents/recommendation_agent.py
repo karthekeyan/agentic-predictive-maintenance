@@ -25,6 +25,16 @@ def recommend_action(machine_id: int, model: str, diagnosis_result: dict,
             'based_on_cases': 0
         }
 
+    if component.lower() == 'none':
+        return {
+            'machine_id': machine_id,
+            'component': 'none',
+            'diagnosis_confidence': diagnosis_result.get('confidence'),
+            'recommendation': 'No maintenance action needed - no failure predicted for this machine.',
+            'based_on_cases': 0,
+            'historical_resolution_rate': None
+        }
+
     action_result = get_historical_maintenance_action(component, model, failures_df, maint_df, machines_df)
 
     return {
@@ -35,3 +45,4 @@ def recommend_action(machine_id: int, model: str, diagnosis_result: dict,
         'based_on_cases': action_result['num_historical_cases'],
         'historical_resolution_rate': action_result['resolution_rate']
     }
+

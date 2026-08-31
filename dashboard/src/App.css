@@ -134,6 +134,8 @@ header h1 {
   display: block; 
   font-size: 0.75rem; 
   color: #888;  
+  min-height: 2.2em;
+  line-height: 1.1em;
 }
 
 .metric-value { 

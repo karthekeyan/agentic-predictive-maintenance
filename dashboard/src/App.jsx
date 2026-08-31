@@ -112,7 +112,11 @@ function App() {
                     <span className="metric-label">Diagnosis</span>
                     <span className="metric-value">{diagnosis.diagnosis ? diagnosis.diagnosis : 'N/A'}</span>
                   </div>  
-                  <span className="metric-caption">Part most likely to fail in the next 24h</span>
+                  <span className="metric-caption">
+                    {diagnosis.diagnosis?.toLowerCase() === 'none' 
+                      ? 'No failure expected in the next 24h'
+                      : 'Part most likely to fail in the next 24h'}
+                  </span>
                 </div>
                 <div className="metric">
                   <div className="metric-header"> 
@@ -124,7 +128,11 @@ function App() {
                      {diagnosis.classifierProbability ? (diagnosis.classifierProbability * 100).toFixed(1) + '%' : 'N/A'}
                     </span>
                   </div>
-                  <span className="metric-caption">Chance this part will fail as per AI model</span>
+                  <span className="metric-caption">
+                    {diagnosis.diagnosis?.toLowerCase() === 'none'
+                      ? 'Probability of no failure in 24h'
+                      : 'Chance this part will fail in next 24h'}                    
+                  </span>
                 </div>
                 <div className="metric">
                   <div className="metric-header">
@@ -136,12 +144,18 @@ function App() {
                 <div className="metric">
                   <div className="metric-header">
                     <span className="metric-label">Routing</span>
-                    <span className="metric-value">{diagnosis.routing.replace('_', ' ')}</span>
+                    <span className="metric-value">
+                      {diagnosis.routing === 'auto_route' && diagnosis.diagnosis?.toLowerCase() === 'none'
+                        ? 'No Action'
+                        : diagnosis.routing.replace('_', ' ')}
+                    </span>
                   </div>
                   <span className="metric-caption">
                     {diagnosis.routing === 'auto_route'
-                      ? 'High confidence - auto-routed to maintenance team'
-                      : 'Requires human engineer review before proceeding'} 
+                      ? (diagnosis.diagnosis?.toLowerCase() === 'none'  
+                          ? 'High confidence - nothing needs fixing'
+                          : 'High confidence - auto-routed to maintenance team')
+                        : 'Requires human engineer review before proceeding'}                   
                   </span>
                 </div>
               </div>

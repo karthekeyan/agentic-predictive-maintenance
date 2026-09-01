@@ -64,6 +64,13 @@ the full LangGraph pipeline.
 same-day maintenance record, confirming the maintenance data genuinely reflects
 real repair actions rather than unrelated scheduled servicing.
 
+**Threshold validation:** the 0.05/0.15 High/Medium/Low cutoffs were
+originally chosen through iterative testing against real data, then
+formally validated on 1st Sept via a precision-recall curve analysis.
+The mathematically optimal threshold (0.032) performs only marginally
+better (97.6% vs 94.7% recall, 92.6% vs 93.6% precision) — the current
+thresholds were kept for simplicity and stability.
+
 ## Historical failure frequency
 
 Alongside the health score (current sensor deviation), the dashboard shows

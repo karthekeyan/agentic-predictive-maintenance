@@ -104,7 +104,7 @@ function App() {
                   <div className="metric-header">
                     <span className="metric-label">Probability</span>
                     <span className="metric-value">
-                      {diagnosis.classifierProbability ? (diagnosis.classifierProbability * 100).toFixed(1) + '%' : 'N/A'}
+                      {diagnosis.classifierProbability ? (diagnosis.classifierProbability * 100).toFixed(2) + '%' : 'N/A'}
                     </span>
                   </div>
                   <span className="metric-caption">

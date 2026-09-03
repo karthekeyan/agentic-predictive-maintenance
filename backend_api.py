@@ -52,60 +52,54 @@ def machines_at_risk(date: str):
 
     for mid in machines['machineID'].unique():
         result = predict_failure_risk(int(mid), telemetry_scored, as_of=as_of)
-        if result['health_score'] is not None:
-            model = machines[machines['machineID'] == mid]['model'].values[0]
-            freq_result = get_historical_failure_frequency(int(mid), model, as_of, failures, mtbf_table)
+        if result['health_score'] is None:
+            continue
 
-            results.append({
-                "machineId": int(mid),
-                "healthScore": round(float(result['health_score']), 4),
-                "riskLevel": result['risk_level'],
-                "avgDaysBetweenFailures": freq_result['avg_days_between_failures'],
-                "failureFrequencyLabel": freq_result['frequency_label'],
-                "model": model,
-            })
+        model = machines[machines['machineID'] == mid]['model'].values[0]
 
-    # Option B: run the real classifier only on High/Medium risk machines,
-    # to get genuine failure-probability ranking without the cost of
-    # running it on all 100 machines every time.
-    high_medium = [r for r in results if r['riskLevel'] in ('high', 'medium')]
-    low = [r for r in results if r['riskLevel'] == 'low']
-
-    for r in high_medium:
+        # Run the real classifier on EVERY machine - guarantees Rule 1:
+        # Red is only ever assigned when a real failure is genuinely predicted
         classifier_result = predict_component_failure_24h(
-            machine_id=r['machineId'],
+            machine_id=int(mid),
             as_of=as_of,
             telemetry_df=telemetry,
             errors_df=errors,
             maint_df=maint,
             machines_df=machines,
         )
-        if classifier_result.get('status') == 'ok':
-            # "none" means no failure predicted - treat its probability as
-            # the inverse (low failure likelihood), so it sorts correctly
-            # alongside real component predictions
-            if classifier_result['predicted_label'] == 'none':
-                r['failureProbability'] = 1 - classifier_result['probability']
-            else:
-                r['failureProbability'] = classifier_result['probability']
-            r['classifierPrediction'] = classifier_result['predicted_label']
+
+        entry = {
+            "machineId": int(mid),
+            "healthScore": round(float(result['health_score']), 4),
+        }
+
+        if classifier_result.get('status') == 'ok' and classifier_result['predicted_label'] not in (None, 'none'):
+            entry['category'] = 'red'
+            entry['classifierPrediction'] = classifier_result['predicted_label']
+            entry['probability'] = round(float(classifier_result['probability']), 4)
         else:
-            r['failureProbability'] = 0
-            r['classifierPrediction'] = None
+            # No failure predicted - color by health score alone
+            none_probability = classifier_result.get('all_probabilities', {}).get('none', 0)
+            entry['probability'] = round(float(none_probability), 4)
+            entry['classifierPrediction'] = None
+            entry['category'] = 'green' if entry['probability'] > 0.95 else 'yellow'
+                        
+            
 
-    # Sort the High/Medium group by real failure probability (highest first)
-    high_medium.sort(key=lambda x: -x.get('failureProbability', 0))
+        results.append(entry)
 
-    # Low-risk machines stay sorted by health score, appended after
-    low.sort(key=lambda x: -x['healthScore'])
+    red = [r for r in results if r['category'] == 'red']
+    yellow = [r for r in results if r['category'] == 'yellow']
+    green = [r for r in results if r['category'] == 'green']
 
-    final_results = high_medium + low
+    red.sort(key=lambda x: -x['probability'])
+    yellow.sort(key=lambda x: -x['probability'])
+    green.sort(key=lambda x: -x['probability'])
 
-    # Clean up the internal 'model' field we added, not needed in the response
-    for r in final_results:
-        r.pop('model', None)
+    final_results = red + yellow + green
 
     return {"date": date, "machines": final_results}
+
 
 @app.get("/diagnose/{machine_id}")
 def diagnose_machine(machine_id: int, date: str):

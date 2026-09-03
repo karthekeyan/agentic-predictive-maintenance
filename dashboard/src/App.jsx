@@ -4,9 +4,9 @@ import './App.css';
 const API_BASE = 'http://localhost:8000';
 
 const riskColors = {
-  high: '#d63a3a',
-  medium: '#d68a10',
-  low: '#5a9e5a',
+  red: '#d63a3a',
+  yellow: '#d68a10',
+  green: '#5a9e5a',
 };
 
 function App() {
@@ -84,9 +84,9 @@ function App() {
                   onClick={() => runDiagnosis(m.machineId)}
                 >
                   <span className="machine-id">Machine {m.machineId}</span>
-                  <span className="risk-badge" style={{ backgroundColor: riskColors[m.riskLevel] }}>
-                    Health Risk: {m.riskLevel === 'medium' ? 'Med' : m.riskLevel}
-                  </span>
+                  <span className="risk-badge" style={{ backgroundColor: riskColors[m.category] }}>
+                    Failure Risk: {m.category === 'red' ? 'High' : m.category === 'yellow' ? 'Med' : 'Low'}
+                  </span>                
                 </div>
               );
             })}
@@ -102,10 +102,16 @@ function App() {
               <div className="metrics-row">
                 <div className="metric">
                   <div className="metric-header">
-                    <span className="metric-label">Health Score</span>
-                    <span className="metric-value">{diagnosis.healthScore.toFixed(3)}</span>
+                    <span className="metric-label">Probability</span>
+                    <span className="metric-value">
+                      {diagnosis.classifierProbability ? (diagnosis.classifierProbability * 100).toFixed(2) + '%' : 'N/A'}
+                    </span>
                   </div>
-                  <span className="metric-caption">Closer to 0 is normal — higher means more unusual</span>
+                  <span className="metric-caption">
+                    {diagnosis.diagnosis?.toLowerCase() === 'none'
+                      ? 'Probability of no failure happens in next 24hrs'
+                      : 'Chance that this part will fail in the next 24hrs' }  
+                  </span>                  
                 </div>
                 <div className="metric">
                   <div className="metric-header">                   
@@ -114,33 +120,10 @@ function App() {
                   </div>  
                   <span className="metric-caption">
                     {diagnosis.diagnosis?.toLowerCase() === 'none' 
-                      ? 'No failure expected in the next 24h'
+                      ? 'No Component Failure expected in the next 24h'
                       : 'Part most likely to fail in the next 24h'}
                   </span>
-                </div>
-                <div className="metric">
-                  <div className="metric-header"> 
-                    <span className="metric-label">Probability</span>
-                    <span
-                      className="metric-value"
-                      style={{ color: diagnosisDisagreesWithClassifier ? '#d68a10' : undefined }}
-                    >
-                     {diagnosis.classifierProbability ? (diagnosis.classifierProbability * 100).toFixed(1) + '%' : 'N/A'}
-                    </span>
-                  </div>
-                  <span className="metric-caption">
-                    {diagnosis.diagnosis?.toLowerCase() === 'none'
-                      ? 'Probability of no failure in 24h'
-                      : 'Chance this part will fail in next 24h'}                    
-                  </span>
-                </div>
-                <div className="metric">
-                  <div className="metric-header">
-                    <span className="metric-label">Reasoning Confidence</span>
-                    <span className="metric-value">{diagnosis.confidence ? diagnosis.confidence + '%' : 'N/A'}</span>
-                  </div>
-                  <span className="metric-caption">How confident the diagnosis is based on past cases</span>
-                </div>
+                </div>   
                 <div className="metric">
                   <div className="metric-header">
                     <span className="metric-label">Routing</span>
@@ -163,18 +146,15 @@ function App() {
                 <div className="evidence-box">
                   <h4>Reasoning</h4>
                   <p>{diagnosis.reasoning}</p>
+                  <p className="reasoning-confidence-note">
+                    Confidence: {diagnosis.confidence ? diagnosis.confidence + '%' : 'N/A'} — how confident this is, after checking similar past cases too
+                  </p>
                 </div>
                 <div className="evidence-box">
                   <h4>Recommendation</h4>
                   <p>{diagnosis.recommendation}</p>
                 </div>
               </div>
-
-              {diagnosis.routing !== 'auto_route' ? (
-                <p className="placeholder">This case requires human engineer review before proceeding.</p>
-              ) : (
-                <p className="placeholder">High confidence - auto-routed to maintenance team.</p>
-              )}
             </div>
           )}
         </div>

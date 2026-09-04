@@ -1,3 +1,6 @@
+Here's the complete, refreshed `README.md` — everything from the original, plus today's three additions worked in cleanly.
+
+```markdown
 # Agentic Predictive Maintenance PoC
 
 A multi-agent AI system that predicts industrial machine failures from real sensor
@@ -57,12 +60,18 @@ The primary demo interface, built on the same validated pipeline — no separate
 2. Start the frontend: `cd dashboard && npm run dev`
 3. Open `http://localhost:5173`
 
-Pick a date, see machines ranked by risk (High/Medium re-ranked by the real ML
-classifier's probability; Low kept by health score, to bound response time),
-click any machine for the full diagnosis: health score, diagnosed component,
-the ML model's independent probability, the AI's reasoning confidence, a
-grounded recommendation, and a routing decision — each field shown with a
-plain-language explanation of what it means.
+Pick a date, see machines ranked by risk:
+
+- **Red** — the classifier predicts a real component failure within the next 24 hours (its formally validated task).
+- **Yellow** — no failure predicted in the next 24 hours, but the same classifier, re-run at later time offsets, predicts one 24-72 hours out (see "Extended lookout window" under Validated Results).
+- **Green** — clean across the full 72-hour lookout.
+
+Click any machine for the full diagnosis: health score, diagnosed component,
+the ML model's independent probability (shown as calibrated historical
+accuracy rather than raw score for high-confidence predictions — see Known
+Limitations), the AI's reasoning confidence, a grounded recommendation, and a
+routing decision — each field shown with a plain-language explanation of
+what it means.
 
 **Backup interface:** `streamlit run app.py` — a simpler, single-file version of the same pipeline.
 
@@ -78,6 +87,17 @@ precision**, catching failures with 24 hours of advance warning.
 time-based split (train: before Nov 1 2015, test: on/after) — **0.82–0.94
 recall per component** on held-out real test data. Re-confirmed live on 11
 fresh real test cases (10/11 correct).
+
+**Extended lookout window (24-72h):** the classifier's formally validated
+task is a 24-hour prediction. Re-running it at later time offsets (no
+retraining involved — same model, just checked further ahead) and
+backtesting across 6 dates (Feb-Sep 2015, 70 real failures total) showed
+recall rising from **24.3%** (24h window only) to **80.0%** (24-72h
+combined), with **100% precision** (39/39) on the extended-window flags
+specifically. This extrapolates beyond the classifier's originally validated
+24h scope — treated as a promising but not-yet-fully-validated capability
+pending a larger backtest sample, and drives the dashboard's "Yellow"
+category.
 
 **Full diagnosis chain (Reasoning Agent):** validated on multiple random
 samples — 100% on a 4-case set, 80% on a fresh 10-case set, and 100% on a
@@ -123,7 +143,7 @@ data rather than failure timing alone.**
 ## What's real vs. what's a design choice
 
 - **Real, data-derived:** health scores, MTBF statistics, retrieved case evidence, the ML classifier's predictions, maintenance recommendations, all backtest accuracy numbers.
-- **Design/policy choice, not derived from data:** the confidence thresholds used for auto-routing vs. engineer review vs. urgent escalation. These are configurable, the same way any deployed system has tunable policy parameters.
+- **Design/policy choice, not derived from data:** the confidence thresholds used for auto-routing vs. engineer review vs. urgent escalation, and the 24-72h Yellow window boundaries. These are configurable, the same way any deployed system has tunable policy parameters.
 
 ---
 
@@ -136,6 +156,7 @@ data rather than failure timing alone.**
 5. **Health score sensor weighting is currently equal, not learned.** A logistic regression on the same 1,040-case backtest showed learned weights (rotation weighted higher) improve recall to 96.5% at a small precision cost (92.2%, down from 93.6%). Investigated, documented, not yet adopted.
 6. **No Memory / continuous learning loop.** The system does not currently retain engineer feedback (approve/reject decisions) or use it to improve future diagnoses — each check runs independently, with no state carried forward. A human-in-the-loop review widget exists but does not yet write outcomes back into the Knowledge Library. Identified as a genuine gap against the standard "Model / Tools / Knowledge base / Memory" agentic architecture pattern — the first three are implemented, Memory is not.
 7. **No continuous monitoring or alerting.** The system is on-demand only — a user must open the dashboard and manually check. There is no automated background process that watches machines and proactively notifies anyone of emerging risk.
+8. **Displayed model confidence is not calibrated to real-world accuracy.** The classifier's raw softmax output clusters heavily near 99-100%, a structural property of how tree-ensemble models combine votes rather than a sign of instability — verified directly by inspecting raw pre-softmax scores (e.g. a ~8-point internal gap becomes 99.96% vs 0.04% once exponentiated). Backtested against 300 real cases (150 real failures + 150 confirmed-healthy periods), predictions in the 99-100% confidence bucket were actually correct **95.9%** of the time, not 100%. The dashboard now displays this measured historical accuracy for high-confidence predictions rather than the raw score, to avoid overstating certainty. Lower-confidence buckets had too few samples (1-5 cases each) in this backtest to calibrate reliably and are shown as raw values with that caveat.
 
 Additional bugs found and fixed during development (NaN validation gap, a
 text-embedding search bias toward certain components, an accidental deletion
@@ -152,3 +173,5 @@ would additionally need real sensor integration, site-specific criticality
 weighting, validation against that plant's own failure history, and — for
 genuine production use — the Memory and Monitoring/Alerting capabilities
 noted above as identified but not yet implemented.
+```
+

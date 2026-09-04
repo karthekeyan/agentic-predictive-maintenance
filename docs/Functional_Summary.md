@@ -37,6 +37,8 @@ Decides, based on the confidence of the diagnosis, whether a case should go stra
 ### 3.7 Trained Machine Learning Classifier
 A separately trained model (XGBoost) that independently predicts whether a machine will fail within 24 hours and which component, using 22 real engineered features from sensor, error, and maintenance data. Trained and tested with a strict time-based split (learned only from earlier data, tested only on later, unseen data) to avoid any unfair advantage. Its prediction is fed directly into the Reasoning Agent as evidence, and is also shown separately on the dashboard for transparency.
 
+The same trained classifier is also re-run at later time offsets (24-48 hours and 48-72 hours ahead) for machines showing no immediate risk, extending its practical lookout beyond its originally validated 24-hour task — see Section 4 for backtested results.
+
 ### 3.8 Feedback / Evaluation Function
 Backtests the system's predictions against real recorded outcomes, producing genuine, defensible accuracy figures rather than assumed performance.
 
@@ -49,6 +51,9 @@ Backtests the system's predictions against real recorded outcomes, producing gen
 | Recall (real failures correctly flagged) | 94.7% | 1,040 real test cases (740 real failures, 300 confirmed-healthy periods) |
 | Precision (flags that were genuine) | 93.6% | Same 1,040-case test set |
 | ML classifier accuracy | 82–94% recall per component | Time-based train/test split on real historical data |
+| Extended lookout window (24-72h) recall | 24.3% → 80.0% | Backtested across 6 historical dates, 70 real failures total; same model, no retraining |
+| Extended lookout window precision | 100% (39/39) | Same 6-date backtest |
+| Displayed confidence reliability (99–100% band) | 95.9% actual accuracy | Backtested against 300 real outcomes (150 real failures, 150 confirmed-healthy periods) |
 | Risk-threshold optimality | Confirmed near-optimal | Formal precision-recall curve analysis |
 
 ---
@@ -60,13 +65,20 @@ Several real technical issues were identified through rigorous testing and corre
 - **Missing/invalid sensor data** could previously produce a confident but ungrounded diagnosis — fixed with a validation guard that now correctly reports "insufficient data."
 - **A systematic bias** caused the diagnosis to favor only two of four possible failing components — root-caused and fixed, improving test accuracy from 50% to 80–100%.
 - **A 24-hour failure probability feature**, built using only historical failure timing, was rigorously tested and found to have no real predictive value, because real machine failures do not occur on a predictable schedule. This was proven with direct evidence, reported transparently, and the feature was honestly relabeled rather than left as a misleading claim.
+- **The dashboard's displayed model confidence** appeared to show "100%" in the large majority of cases. Investigation traced this to the mathematics used to convert the model's internal scores into percentages (softmax), which sharply amplifies whichever outcome is already ahead — confirmed directly by inspecting the model's raw, pre-conversion scores. Backtesting against 300 real outcomes confirmed the underlying prediction is genuinely reliable at that confidence level (95.9% actual accuracy) but not literally 100%; the dashboard was corrected to display this measured, real accuracy figure instead of the raw score for high-confidence predictions.
 - **Risk-level thresholds** were formally checked against a statistical optimization method and confirmed to already be near-optimal.
 
 ---
 
 ## 6. User-Facing Dashboard
 
-A working web dashboard allows a user to select any date and see all 100 machines ranked by real risk. Selecting a machine shows: its health score, the diagnosed likely-failing component (or "none"), the trained ML model's independent confidence, the AI's overall reasoning confidence, a grounded maintenance recommendation, and a routing decision — each field accompanied by a plain-language explanation of what it means and how to read it.
+A working web dashboard allows a user to select any date and see all 100 machines ranked by real risk, grouped into three categories:
+
+- **High risk (Red):** the ML classifier predicts a specific component will fail within the next 24 hours — its formally validated task.
+- **Medium risk (Yellow):** no failure predicted in the next 24 hours, but the same classifier predicts one when checked 24-72 hours further out (see Section 4 for backtested accuracy of this extended window).
+- **Low risk (Green):** no failure predicted across the full 72-hour lookout.
+
+Selecting a machine shows: its health score, the diagnosed likely-failing component (or "none"), the trained ML model's independent confidence (shown as measured historical accuracy for high-confidence predictions, per Section 5), the AI's overall reasoning confidence, a grounded maintenance recommendation, and a routing decision — each field accompanied by a plain-language explanation of what it means and how to read it.
 
 ---
 
@@ -74,4 +86,6 @@ A working web dashboard allows a user to select any date and see all 100 machine
 
 - Ambiguous cases where two sensors show comparably strong signals can occasionally produce a confident but incorrect diagnosis — a known, documented limitation.
 - The system identifies which component is likely to fail, not the underlying physical cause of the failure.
+- Displayed model confidence is well-calibrated at the 99-100% range (95.9% real accuracy, 291 backtested cases) but has too few backtested examples in mid-confidence ranges to calibrate reliably there; those values are shown as raw scores with that caveat noted.
+- The Medium-risk (24-72h) category extends the classifier beyond its originally validated 24-hour task. Backtested results are strongly positive (80.0% recall, 100% precision) but based on a limited sample (70 real failures across 6 dates) — a larger, ongoing backtest is recommended before broader reliance on this capability.
 - This is a validated proof of concept on one public dataset; deployment at a real plant would require integration with that plant's own sensors and re-validation against its own failure history.

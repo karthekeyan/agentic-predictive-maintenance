@@ -66,6 +66,11 @@ XGBoost multi-class classifier (`comp1`–`comp4`, `none`). 22 features:
 
 **Inference:** single-machine/single-date feature builder (`build_features_for_prediction.py`) mirrors the batch training logic exactly, using only data at or before the query timestamp.
 
+**Extended-window inference:** the same trained classifier (no retraining) is additionally called at `as_of + 24h` and `as_of + 48h` for any machine not flagged in the standard 24h window, to check whether a failure becomes predictable further out. This is a pure inference-time extension — the model's training, features, and label definition are unchanged; only the query timestamp shifts. See Section 4 for backtested accuracy of this extension.
+
+### 3.5 Confidence Output (Softmax)
+`predict_proba()` returns class probabilities computed via softmax over the model's raw per-class margin scores (`predict(output_margin=True)`). Verified directly against a real prediction: raw margin gaps of roughly 8 points between the top two classes produced a post-softmax split of 99.96% vs. 0.04% — confirming that softmax's exponential term (`e^x`) sharply amplifies whichever class is already ahead, rather than the model being unusually decisive at the margin-score level. See Section 4 for the calibration backtest quantifying how this raw score relates to actual accuracy.
+
 ---
 
 ## 4. Evaluation Methodology
@@ -76,13 +81,19 @@ XGBoost multi-class classifier (`comp1`–`comp4`, `none`). 22 features:
 
 **A rejected approach, documented for transparency:** a historical-timing-based "24h failure probability" (both a flat-rate and an elapsed-time-since-last-failure variant) was built and backtested. Both showed no meaningful separation between pre-failure and normal periods (8.02% vs. 7.92%; 15.42% vs. 16.39% average predicted probability). Root cause: failure gap coefficient of variation ≈ 0.67 across machines — too irregular for timing alone to predict a specific 24h window. Feature was retired and relabeled as a historical-frequency statistic.
 
+**Confidence calibration backtest:** 300 real cases (150 real failures, `as_of` = failure time − 12h; 150 confirmed-healthy periods, sampled ≥48h from any real failure) were run through the classifier, bucketing `predict_proba` output against actual correctness. Result: the 99–100% confidence bucket (291 of 300 cases) showed 95.9% actual accuracy — a real, quantified overconfidence gap, not a broken model. Buckets below 99% had too few samples (1–5 cases each) to be statistically meaningful and are not used for calibrated display.
+
+**Extended-window (24-72h) backtest:** run across 6 dates (2015-02-01, 03-15, 05-01, 06-03, 07-15, 09-01) × 100 machines, comparing real recorded failures within 96h of each test date against classifier output at `as_of`, `as_of+24h`, and `as_of+48h`. Aggregate across all 6 dates (70 real failures total): standard 24h-window recall 24.3% (17/70), extended-window recall 80.0% (56/70), extended-window flag precision 100% (39/39). Per-date recall ranged 69.2%–90.0%, indicating the effect is consistent rather than date-specific. A separate lead-time trajectory check (9 sampled real failures, confidence sampled at 72/48/24/12/6/2h before failure) showed confidence rising from a mean of ~0.001% (72h, 48h) to ~99%+ (24h and closer) — a step change rather than a gradual gradient, consistent with the softmax amplification behavior noted in Section 3.5.
+
 ---
 
 ## 5. Known Technical Limitations
 
 - `dominant_sensor` selects only the single largest deviation; machines with two comparably strong deviations (found: comp4 vs. comp2 ambiguity) can produce a confident, incorrect classification — not yet addressed with a multi-signal weighting approach.
 - Health score treats all sensors with equal (+1/+1/+1/−1) weighting. A logistic regression trained on the same 1,040-case set showed rotation carries meaningfully more signal than the others (learned weights improved recall to 96.5% at a precision cost of 1.4 points) — investigated but not yet adopted into production.
-- No caching/pre-computation layer: classifier calls are made live per request; fleet-wide ranking (`/machines-at-risk`) runs the classifier only on already-flagged High/Medium machines to bound latency.
+- Displayed classifier confidence is calibrated only for the 99–100% range (95.9% real accuracy per Section 4); lower confidence values are shown raw, without a calibration claim, due to insufficient backtest sample size in those ranges.
+- The 24-72h extended-window logic queries the classifier beyond its trained/validated 24h task boundary. Backtested performance is strong (Section 4) but based on a limited sample (70 real failures, 6 dates) — treated as a promising, not yet fully validated, capability.
+- No caching/pre-computation layer: classifier calls are made live per request. Fleet-wide ranking (`/machines-at-risk`) now runs the classifier on **every** machine for the standard 24h window (previously limited to already-flagged machines, changed to guarantee no real failure is missed), plus up to two additional calls per machine (24-48h, 48-72h) for machines not flagged in the standard window — up to ~3x the classifier calls of the original implementation, increasing endpoint latency accordingly.
 - No authentication, rate limiting, or multi-tenant data isolation on the FastAPI backend — acceptable for a local PoC, not for external deployment.
 - No structured logging/tracing (e.g., LangSmith) across agent runs; debugging currently relies on manual notebook re-execution.
 

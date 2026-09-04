@@ -172,3 +172,4 @@ From here, see **`User_Guide.md`** for how to actually use the dashboard — rea
 | Dashboard loads but the machine list stays empty | The backend (Terminal 1) isn't running — check for errors there |
 | `FileNotFoundError` for the trained model | Step 10 (training the classifier) wasn't run, or wasn't run from the project root |
 | Browser shows a CORS error | Confirm the backend is running on port 8000 and the frontend on 5173 — these are hardcoded to match each other |
+| "Check machines" takes noticeably longer than before | Expected — Yellow category now re-runs the classifier for up to 3 time windows per machine |

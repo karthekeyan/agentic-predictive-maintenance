@@ -1,6 +1,7 @@
 Here's the complete, refreshed `README.md` — everything from the original, plus today's three additions worked in cleanly.
 
 ```markdown
+```
 # Agentic Predictive Maintenance PoC
 
 A multi-agent AI system that predicts industrial machine failures from real sensor

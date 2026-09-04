@@ -26,31 +26,25 @@ def build_reasoning_prompt(machine_id: int, retrieval_result: dict, classifier_r
             f"A trained machine learning model (XGBoost, validated with 0.82-0.94 recall "
             f"per component on a time-aware historical test) predicts: "
             f"'{classifier_result['predicted_label']}' "
-            f"with {classifier_result['probability']*100:.1f}% confidence. "
+            f"with {classifier_result['probability']*100:.2f}% confidence. "
             f"This model was trained specifically to predict failure within a 24-hour window "
             f"using real sensor, error, and maintenance history - treat this as strong evidence, "
             f"particularly when it disagrees with the statistical baseline below."
         )
 
     return f"""You are a predictive maintenance analyst. Based on real sensor data, a trained prediction model, and retrieved historical cases, identify the most likely failing component for this machine - or whether no failure is imminent.
-
 CURRENT MACHINE STATE (Machine {machine_id}):
 {retrieval_result['query_used']}
-
 TRAINED MODEL PREDICTION (validated on historical data):
 {classifier_text}
-
 STATISTICALLY MOST COMMON FAILURE for this machine's model (general historical base rate, weaker evidence than the trained model prediction above): {retrieval_result['statistically_likely_component']}
-
 RETRIEVED SIMILAR HISTORICAL CASES (real past failures, ranked by similarity):
 {cases_text}
-
 Based on the evidence above, respond in this exact format:
 LIKELY_COMPONENT: [component name, or "none" if the trained model predicts no imminent failure and no other evidence contradicts it]
 CONFIDENCE: [a number from 0 to 100]
 REASONING: [2-3 sentences explaining your diagnosis. If the trained model's prediction differs from the statistical baseline or retrieved cases, explain how you weighed the evidence and why.]
-
-The trained model prediction is generally the strongest evidence, since it was specifically validated for this task. Do not invent information not present in the evidence above."""
+The trained model prediction is generally the strongest evidence, since it was specifically validated for this task. Do not invent information not present in the evidence above. When referencing the trained model's confidence percentage in your reasoning, quote the exact figure given above (e.g. '99.96%') rather than rounding it to a whole number."""
 
 
 def diagnose(machine_id: int, retrieval_result: dict, classifier_result: dict = None) -> dict:

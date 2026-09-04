@@ -1,19 +1,17 @@
-Here's the complete, refreshed `README.md` — everything from the original, plus today's three additions worked in cleanly.
-
 ```markdown
 ```
 # Agentic Predictive Maintenance PoC
 
-A multi-agent AI system that predicts industrial machine failures from real sensor
+A multi-agent AI system that predicts industrial machine failures from sensor
 data, explains its diagnosis using retrieved historical evidence and a trained
-machine learning model, recommends a maintenance action grounded in real repair
+machine learning model, recommends a maintenance action grounded in repair
 history, and knows when to act automatically versus escalate to a human engineer.
 
 See `docs/PoC_Summary.pptx` for the executive-level presentation of this project's
 architecture, results, and roadmap.
 
 Built entirely on the [Microsoft Azure Predictive Maintenance dataset](https://www.kaggle.com/datasets/arnabbiswas1/microsoft-azure-predictive-maintenance)
-(Kaggle) — no simulated or invented data anywhere in the pipeline.
+(Kaggle).
 
 ---
 
@@ -33,7 +31,7 @@ ML/statistical logic stays separate from the agent's reasoning layer:
 | 7 | Feedback/Evaluation Agent | `check_against_ground_truth` | Backtests predictions against real recorded failures |
 
 **Trained ML classifier (`predict_component_failure_24h`):** an XGBoost model
-trained on 22 real engineered features (sensor telemetry, error counts, days
+trained on 22 engineered features (sensor telemetry, error counts, days
 since maintenance, machine age/model), with a strict time-based train/test
 split. Its prediction is fed directly into the Reasoning Agent's prompt as
 primary evidence, and is also shown separately on the dashboard for
@@ -63,7 +61,7 @@ The primary demo interface, built on the same validated pipeline — no separate
 
 Pick a date, see machines ranked by risk:
 
-- **Red** — the classifier predicts a real component failure within the next 24 hours (its formally validated task).
+- **Red** — the classifier predicts a component failure within the next 24 hours (its formally validated task).
 - **Yellow** — no failure predicted in the next 24 hours, but the same classifier, re-run at later time offsets, predicts one 24-72 hours out (see "Extended lookout window" under Validated Results).
 - **Green** — clean across the full 72-hour lookout.
 
